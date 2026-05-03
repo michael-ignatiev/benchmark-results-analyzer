@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+demo/output/
+
+.env
+.env.*
+!.env.example
+
+*.log
+npm-debug.log*
+*.tgz
+
+.DS_Store
+.benchmark-analyzer/
+.benchmark-analyzer*.json

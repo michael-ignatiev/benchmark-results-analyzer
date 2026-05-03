@@ -1,0 +1,3 @@
+export const PARSER_REGISTRY = Symbol("PARSER_REGISTRY");
+export const RUN_REPOSITORY = Symbol("RUN_REPOSITORY");
+export const RUN_INGESTION_SERVICE = Symbol("RUN_INGESTION_SERVICE");

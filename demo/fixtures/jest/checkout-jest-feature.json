@@ -1,0 +1,61 @@
+{
+  "suite": {
+    "name": "checkout-service-tests",
+    "scenarioName": "ci",
+    "tags": {
+      "package": "backend",
+      "profile": "demo",
+      "runner": "jest",
+      "team": "commerce-platform"
+    }
+  },
+  "run": {
+    "label": "feature-cart-cache-jest",
+    "commitSha": "4d5e6f7",
+    "branchName": "feature/cart-cache",
+    "environment": "ci",
+    "runAt": "2026-04-27T09:30:00.000Z",
+    "durationMs": 24150,
+    "metadata": {
+      "buildNumber": "demo-1058",
+      "source": "demo-dataset"
+    }
+  },
+  "success": false,
+  "wasInterrupted": false,
+  "numTotalTestSuites": 18,
+  "numPassedTestSuites": 17,
+  "numFailedTestSuites": 1,
+  "numPendingTestSuites": 0,
+  "numRuntimeErrorTestSuites": 0,
+  "numTotalTests": 242,
+  "numPassedTests": 237,
+  "numFailedTests": 3,
+  "numPendingTests": 2,
+  "numTodoTests": 0,
+  "durationMs": 24150,
+  "testResults": [
+    {
+      "name": "packages/checkout/src/cart.service.spec.ts",
+      "status": "failed",
+      "startTime": 1777282200000,
+      "endTime": 1777282209200,
+      "perfStats": {
+        "start": 1777282200000,
+        "end": 1777282209200,
+        "runtime": 9200
+      }
+    },
+    {
+      "name": "packages/checkout/src/payment.service.spec.ts",
+      "status": "passed",
+      "startTime": 1777282209200,
+      "endTime": 1777282224150,
+      "perfStats": {
+        "start": 1777282209200,
+        "end": 1777282224150,
+        "runtime": 14950
+      }
+    }
+  ]
+}

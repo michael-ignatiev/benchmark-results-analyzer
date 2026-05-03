@@ -1,0 +1,115 @@
+{
+  "suite": {
+    "name": "checkout-load-test",
+    "scenarioName": "steady_load",
+    "tags": {
+      "component": "billing",
+      "team": "payments"
+    }
+  },
+  "run": {
+    "label": "main-baseline",
+    "commitSha": "abc1234",
+    "branch": "main",
+    "environment": "staging",
+    "runAt": "2026-04-02T12:00:00Z",
+    "durationMs": 60000
+  },
+  "options": {
+    "summaryTrendStats": ["avg", "min", "med", "max", "p(90)", "p(95)", "p(99)"],
+    "scenarios": {
+      "steady_load": {
+        "executor": "constant-vus",
+        "vus": 8,
+        "duration": "1m"
+      }
+    }
+  },
+  "state": {
+    "testRunDurationMs": 61000
+  },
+  "metrics": {
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.998,
+        "passes": 499,
+        "fails": 1
+      }
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 1048576,
+        "rate": 52428.8
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 262144,
+        "rate": 13107.2
+      }
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 236.4,
+        "min": 10.2,
+        "med": 200,
+        "max": 900,
+        "p(90)": 400,
+        "p(95)": 512.5,
+        "p(99)": 730
+      },
+      "thresholds": {
+        "p(95)<600": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.012,
+        "passes": 6,
+        "fails": 494
+      },
+      "thresholds": {
+        "rate<0.02": {
+          "ok": true
+        }
+      }
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 500,
+        "rate": 25
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 125,
+        "rate": 6.25
+      }
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 3,
+        "min": 1,
+        "max": 8
+      }
+    }
+  }
+}

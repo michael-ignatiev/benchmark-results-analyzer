@@ -1,0 +1,61 @@
+{
+  "suite": {
+    "name": "checkout-service-tests",
+    "scenarioName": "ci",
+    "tags": {
+      "package": "backend",
+      "profile": "demo",
+      "runner": "jest",
+      "team": "commerce-platform"
+    }
+  },
+  "run": {
+    "label": "main-jest-2026-04-26",
+    "commitSha": "3c4d5e6",
+    "branchName": "main",
+    "environment": "ci",
+    "runAt": "2026-04-26T09:30:00.000Z",
+    "durationMs": 18200,
+    "metadata": {
+      "buildNumber": "demo-1051",
+      "source": "demo-dataset"
+    }
+  },
+  "success": true,
+  "wasInterrupted": false,
+  "numTotalTestSuites": 18,
+  "numPassedTestSuites": 18,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numRuntimeErrorTestSuites": 0,
+  "numTotalTests": 241,
+  "numPassedTests": 239,
+  "numFailedTests": 0,
+  "numPendingTests": 2,
+  "numTodoTests": 0,
+  "durationMs": 18200,
+  "testResults": [
+    {
+      "name": "packages/checkout/src/cart.service.spec.ts",
+      "status": "passed",
+      "startTime": 1777195800000,
+      "endTime": 1777195806200,
+      "perfStats": {
+        "start": 1777195800000,
+        "end": 1777195806200,
+        "runtime": 6200
+      }
+    },
+    {
+      "name": "packages/checkout/src/payment.service.spec.ts",
+      "status": "passed",
+      "startTime": 1777195806200,
+      "endTime": 1777195818200,
+      "perfStats": {
+        "start": 1777195806200,
+        "end": 1777195818200,
+        "runtime": 12000
+      }
+    }
+  ]
+}

@@ -1,0 +1,124 @@
+{
+  "name": "acme-commerce-demo-v1",
+  "description": "Polished local demo data for Benchmark Results Analyzer.",
+  "project": {
+    "name": "Acme Commerce Demo",
+    "description": "Demo project with API load tests and Jest CI results for checkout workflows.",
+    "metadata": {
+      "demo": true,
+      "owner": "platform-performance",
+      "domain": "commerce"
+    }
+  },
+  "runs": [
+    {
+      "key": "checkout-main-2026-04-24",
+      "sourceType": "k6",
+      "file": "k6/checkout-main-2026-04-24.json",
+      "description": "Stable main branch checkout API load test."
+    },
+    {
+      "key": "checkout-main-2026-04-25",
+      "sourceType": "k6",
+      "file": "k6/checkout-main-2026-04-25.json",
+      "description": "Main branch run with the best p95 latency in the demo history."
+    },
+    {
+      "key": "checkout-main-2026-04-26",
+      "sourceType": "k6",
+      "file": "k6/checkout-main-2026-04-26.json",
+      "description": "Latest main branch checkout API baseline."
+    },
+    {
+      "key": "checkout-feature-cart-cache",
+      "sourceType": "k6",
+      "file": "k6/checkout-feature-cart-cache.json",
+      "description": "Feature branch run with higher latency, lower throughput, and a missing byte metric."
+    },
+    {
+      "key": "checkout-jest-main",
+      "sourceType": "jest",
+      "file": "jest/checkout-jest-main.json",
+      "description": "Passing Jest CI baseline for checkout services."
+    },
+    {
+      "key": "checkout-jest-feature",
+      "sourceType": "jest",
+      "file": "jest/checkout-jest-feature.json",
+      "description": "Feature branch Jest run with a failing suite and longer duration."
+    }
+  ],
+  "comparisons": [
+    {
+      "key": "checkout-feature-vs-main",
+      "label": "Checkout cart cache feature vs latest main",
+      "baselineRunKey": "checkout-main-2026-04-26",
+      "candidateRunKey": "checkout-feature-cart-cache",
+      "thresholdRules": [
+        {
+          "metricName": "http_req_duration",
+          "aggregationType": "p95",
+          "warnAbovePercent": 10,
+          "mediumAbovePercent": 20,
+          "highAbovePercent": 30
+        },
+        {
+          "metricName": "http_req_duration",
+          "aggregationType": "p99",
+          "warnAbovePercent": 10,
+          "mediumAbovePercent": 25,
+          "highAbovePercent": 35
+        },
+        {
+          "metricName": "http_req_failed",
+          "aggregationType": "rate",
+          "warnAbovePercent": 25,
+          "mediumAbovePercent": 100,
+          "highAbovePercent": 200
+        },
+        {
+          "metricName": "http_reqs",
+          "aggregationType": "rate",
+          "warnBelowPercent": 5,
+          "mediumBelowPercent": 10,
+          "highBelowPercent": 15
+        },
+        {
+          "metricName": "data_sent",
+          "missingSeverity": "low"
+        }
+      ]
+    },
+    {
+      "key": "checkout-jest-feature-vs-main",
+      "label": "Checkout Jest feature branch vs main",
+      "baselineRunKey": "checkout-jest-main",
+      "candidateRunKey": "checkout-jest-feature",
+      "thresholdRules": [
+        {
+          "metricName": "tests_failed",
+          "aggregationType": "count",
+          "warnAbovePercent": 1,
+          "mediumAbovePercent": 50,
+          "highAbovePercent": 100,
+          "missingSeverity": "high"
+        },
+        {
+          "metricName": "test_suites_failed",
+          "aggregationType": "count",
+          "warnAbovePercent": 1,
+          "mediumAbovePercent": 50,
+          "highAbovePercent": 100,
+          "missingSeverity": "high"
+        },
+        {
+          "metricName": "duration_total",
+          "aggregationType": "total",
+          "warnAbovePercent": 15,
+          "mediumAbovePercent": 25,
+          "highAbovePercent": 40
+        }
+      ]
+    }
+  ]
+}

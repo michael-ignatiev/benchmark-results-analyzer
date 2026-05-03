@@ -1,0 +1,66 @@
+{
+  "suite": {
+    "name": "checkout-unit-tests",
+    "scenarioName": "ci",
+    "tags": {
+      "package": "benchmark-results-analyzer",
+      "runner": "jest"
+    }
+  },
+  "run": {
+    "label": "main-unit-tests",
+    "commitSha": "def5678",
+    "branchName": "main",
+    "environment": "ci",
+    "runAt": "2026-04-29T10:00:00.000Z"
+  },
+  "numFailedTestSuites": 1,
+  "numFailedTests": 2,
+  "numPassedTestSuites": 3,
+  "numPassedTests": 10,
+  "numPendingTestSuites": 1,
+  "numPendingTests": 1,
+  "numRuntimeErrorTestSuites": 0,
+  "numTodoTests": 1,
+  "numTotalTestSuites": 5,
+  "numTotalTests": 14,
+  "startTime": 1000,
+  "success": false,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["checkout"],
+          "duration": 14,
+          "failureMessages": [],
+          "fullName": "checkout creates an order",
+          "status": "passed",
+          "title": "creates an order"
+        }
+      ],
+      "endTime": 3000,
+      "message": "",
+      "name": "/repo/src/checkout/checkout.service.test.ts",
+      "startTime": 1000,
+      "status": "passed"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["payments"],
+          "duration": 23,
+          "failureMessages": ["Expected charge to succeed"],
+          "fullName": "payments retries failed charges",
+          "status": "failed",
+          "title": "retries failed charges"
+        }
+      ],
+      "endTime": 7421,
+      "message": "2 tests failed",
+      "name": "/repo/src/payments/payments.service.test.ts",
+      "startTime": 2500,
+      "status": "failed"
+    }
+  ],
+  "wasInterrupted": false
+}

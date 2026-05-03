@@ -1,0 +1,70 @@
+{
+  "name": "benchmark-results-analyzer",
+  "version": "0.1.0",
+  "description": "CLI and core library for normalizing benchmark artifacts and producing deterministic run comparisons.",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "benchmark-analyzer": "dist/cli/main.js",
+    "bra": "dist/cli/main.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "docs/",
+    "demo/fixtures/"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module",
+  "scripts": {
+    "prepare": "npm run build",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "cli": "npm run build && node dist/cli/main.js",
+    "demo:seed": "npm run build && node scripts/import-demo-dataset.mjs",
+    "demo:seed:dry-run": "npm run build && node scripts/import-demo-dataset.mjs --dry-run",
+    "demo:seed:reset": "npm run build && node scripts/import-demo-dataset.mjs --reset-demo",
+    "demo:app:start": "npm --prefix demo/node-app start",
+    "demo:app:test": "npm --prefix demo/node-app test",
+    "demo:app:test:json": "npm --prefix demo/node-app run test:json",
+    "demo:app:k6": "npm --prefix demo/node-app run k6",
+    "demo:app:k6:summary": "npm --prefix demo/node-app run k6:summary",
+    "test": "npm run build && node --test \"test/**/*.test.mjs\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^11.1.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^25.6.0",
+    "@types/pg": "^8.20.0",
+    "@types/supertest": "^7.2.0",
+    "pg-mem": "^3.0.14",
+    "supertest": "^7.2.2",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/core": "^11.1.19",
+    "@nestjs/platform-express": "^11.1.19",
+    "@types/better-sqlite3": "^7.6.13",
+    "better-sqlite3": "^12.9.0",
+    "pg": "^8.20.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  }
+}
