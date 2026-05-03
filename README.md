@@ -243,27 +243,6 @@ The included demo dataset creates an `Acme Commerce Demo` project with:
 - one Jest candidate with failing tests and longer duration
 - two precomputed comparisons
 
-## Live Dummy App
-
-In the source repository, `demo/node-app` contains a self-contained Node.js commerce API that can produce fresh Jest and k6 artifacts for this analyzer. It seeds a realistic in-memory dataset with products, customers, historical orders, inventory, cart pricing, checkout, recommendations, and analytics endpoints.
-
-Install and run its Jest suite:
-
-```bash
-npm --prefix demo/node-app install
-npm run demo:app:test
-npm run demo:app:test:json
-```
-
-Start the API, then run the k6 load test from another terminal:
-
-```bash
-npm run demo:app:start
-npm run demo:app:k6:summary
-```
-
-The JSON-producing scripts write to `demo/output/`, which is ignored by git and can be imported with `npm run cli -- import --file <path> --source jest|k6 ...`.
-
 Validate fixtures without writing storage:
 
 ```bash

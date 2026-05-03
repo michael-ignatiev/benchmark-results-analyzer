@@ -38,11 +38,6 @@
     "demo:seed": "npm run build && node scripts/import-demo-dataset.mjs",
     "demo:seed:dry-run": "npm run build && node scripts/import-demo-dataset.mjs --dry-run",
     "demo:seed:reset": "npm run build && node scripts/import-demo-dataset.mjs --reset-demo",
-    "demo:app:start": "npm --prefix demo/node-app start",
-    "demo:app:test": "npm --prefix demo/node-app test",
-    "demo:app:test:json": "npm --prefix demo/node-app run test:json",
-    "demo:app:k6": "npm --prefix demo/node-app run k6",
-    "demo:app:k6:summary": "npm --prefix demo/node-app run k6:summary",
     "test": "npm run build && node --test \"test/**/*.test.mjs\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
