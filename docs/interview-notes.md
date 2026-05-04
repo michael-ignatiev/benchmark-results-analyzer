@@ -149,8 +149,8 @@ Interview framing:
 
 - CLI-only before CI adapters
   - Fast to validate and script locally, but not yet integrated with a specific CI provider.
-- SQLite default before shared database storage
-  - Good for local npm package ergonomics and history queries; shared/team storage is intentionally out of scope for the MVP.
+- SQLite-only local storage before multi-user storage
+  - Good for local npm package ergonomics and history queries; server-backed team storage is intentionally out of scope for the MVP.
 - Startup schema application before migrations
   - Simple local setup, but not enough for production change management.
 - Per-command thresholds before policy storage
