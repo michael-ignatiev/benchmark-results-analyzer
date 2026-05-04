@@ -1,6 +1,6 @@
 # Benchmark Results Analyzer
 
-Benchmark Results Analyzer is a CLI-only npm package for importing k6/Jest result artifacts, normalizing them into canonical metrics, and producing deterministic benchmark comparisons.
+Benchmark Results Analyzer is a CLI npm package for importing k6/Jest result artifacts, normalizing them into canonical metrics, and producing deterministic benchmark comparisons.
 
 ## Why This Exists
 
@@ -383,7 +383,7 @@ Suggested terminal screenshots:
 
 ## Known Limitations
 
-- SQLite is the only built-in store; schema is applied from TypeScript-managed SQL at startup.
+- SQLite is the built-in store; schema is applied from TypeScript-managed SQL at startup.
 - No migration framework yet.
 - No pagination for long-lived project, suite, run, or finding lists.
 - No background job queue for large imports or expensive comparisons.
