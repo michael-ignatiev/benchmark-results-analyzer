@@ -675,7 +675,7 @@ test("CLI compare supports --baseline and --candidate without saving", async () 
     stderr.join("\n"),
   );
 
-  assert.equal(stdout[0], `Compared ${baseline.runId} vs ${candidate.runId}: 1 regressions, 1 improvements, 16 unchanged, 2 missing.`);
+  assert.equal(stdout[0], `Compared ${baseline.runId} vs ${candidate.runId}: 1 regression, 1 improvement, 16 unchanged, 2 missing.`);
   assert.equal(stdout[1], "Comparison not saved.");
   assert.match(stdout[2], /Compared 20 metrics/);
   assert.equal(await countRows(cwd, "benchmark_comparisons"), 0);
@@ -777,7 +777,7 @@ test("CLI report renders terminal text, markdown, and JSON for a comparison id",
   assert.match(text.stdout[1], /Regressions: http_req_duration p95 regressed/);
   assert.equal(
     text.stdout[2],
-    "Summary: 1 regressions, 1 improvements, 16 unchanged, 2 missing.",
+    "Summary: 1 regression, 1 improvement, 16 unchanged, 2 missing.",
   );
 
   const markdown = createRuntime(cwd);

@@ -233,6 +233,73 @@ Inspect suite history:
 npm run cli -- history --suite checkout-api-load --metric http_req_duration:p95:ms --limit 5
 ```
 
+## Example Output
+
+When installed in a consuming project, the same commands can be run with `npx bra`.
+
+Compare two runs without saving a new comparison:
+
+```bash
+npx bra compare --baseline 3 --candidate 4 --no-save
+```
+
+```text
+Compared 3 vs 4: 17 regressions, 1 improvement, 7 unchanged, 2 missing.
+Comparison not saved.
+Compared 27 metrics: 17 regressions, 1 improvement, 7 unchanged, 2 missing metrics. Regressions: http_req_failed rate regressed (0.5% -> 1.8%, +260%); http_req_duration p95 regressed (421 ms -> 612 ms, +45.368%); http_req_duration max regressed (870 ms -> 1240 ms, +42.529%); and 14 more. Improvements: http_req_duration min improved (38 ms -> 34 ms, -10.526%). Unchanged critical metrics: checks rate stayed at 99.6%.
+```
+
+Generate a Markdown report for a persisted comparison:
+
+```bash
+npx bra report --comparison 1 --format markdown
+```
+
+````markdown
+# Comparison 1
+
+Compared 27 metrics: 17 regressions, 1 improvement, 7 unchanged, 2 missing metrics, including 3 high-severity regressions. Regressions: http_req_failed rate regressed (0.5% -> 1.8%, +260%, high); http_req_duration p95 regressed (421 ms -> 612 ms, +45.368%, high); http_req_duration p99 regressed (650 ms -> 910 ms, +40%, high); and 14 more. Improvements: http_req_duration min improved (38 ms -> 34 ms, -10.526%). Unchanged critical metrics: checks rate stayed at 99.6%. Important missing metrics: data_sent count missing from candidate; baseline was 302400 bytes, low; data_sent rate missing from candidate; baseline was 5040 bytes_per_second, low.
+
+- Baseline run: 3
+- Candidate run: 4
+- Created at: 2026-05-04T16:00:14.597Z
+- Summary: 17 regressions, 1 improvement, 7 unchanged, 2 missing
+
+## Regressions
+
+- http_req_duration p95 ms: p95 latency increased by 45.368% relative to baseline, exceeding the 30% regression threshold
+- http_req_duration p99 ms: p99 latency increased by 40% relative to baseline, exceeding the 35% regression threshold
+- http_req_failed rate percent: rate reliability increased by 260% relative to baseline, exceeding the 200% regression threshold
+
+## Improvements
+
+- http_req_duration min ms: min latency decreased by 10.526% relative to baseline; no threshold rule configured
+
+## Missing Metrics
+
+- data_sent count bytes: Metric present in baseline but missing in candidate
+- data_sent rate bytes_per_second: Metric present in baseline but missing in candidate
+````
+
+Inspect recent suite trends:
+
+```bash
+npx bra history --suite-id 1 --limit 3
+```
+
+```text
+Suite 1 checkout-api-load
+Recent runs (3 shown):
+- run 4 feature-cart-cache 2026-04-27T09:00:00.000Z, branch feature/cart-cache, env staging (25 metrics)
+- run 3 main-2026-04-26 2026-04-26T09:00:00.000Z, branch main, env staging (27 metrics)
+- run 2 main-2026-04-25 2026-04-25T09:00:00.000Z, branch main, env staging (27 metrics)
+Key metric trends:
+- http_req_duration p95 ms: 410 -> 612 (+202, 4 points)
+- http_req_duration p99 ms: 620 -> 910 (+290, 4 points)
+- http_req_failed rate percent: 0.6 -> 1.8 (+1.2, 4 points)
+- http_reqs rate rps: 31.2 -> 27.9 (-3.3, 4 points)
+```
+
 ## Demo Flow
 
 The included demo dataset creates an `Acme Commerce Demo` project with:

@@ -8,8 +8,8 @@ import type {
 
 export function formatComparisonSummary(summary: ComparisonSummary): string {
   return [
-    `${summary.regressions} regressions`,
-    `${summary.improvements} improvements`,
+    pluralize(summary.regressions, "regression"),
+    pluralize(summary.improvements, "improvement"),
     `${summary.unchanged} unchanged`,
     `${summary.missing} missing`,
   ].join(", ");
@@ -82,4 +82,8 @@ export function formatNumber(value: number): string {
   return Number.isInteger(value)
     ? value.toString()
     : value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function pluralize(count: number, singular: string): string {
+  return `${count} ${count === 1 ? singular : `${singular}s`}`;
 }
