@@ -7,15 +7,10 @@ import { CliError } from "./errors.js";
 export const DEFAULT_CONFIG_FILENAME = ".benchmark-analyzer.json";
 export const DEFAULT_SQLITE_STORAGE_PATH = ".benchmark-analyzer/runs.db";
 
-export type BenchmarkAnalyzerStorageConfig =
-  | {
-      type: "sqlite";
-      path: string;
-    }
-  | {
-      type: "postgres";
-      databaseUrlEnv: string;
-    };
+export interface BenchmarkAnalyzerStorageConfig {
+  type: "sqlite";
+  path: string;
+}
 
 export interface BenchmarkAnalyzerConfig {
   projectName?: string;
@@ -29,9 +24,7 @@ export interface WriteInitialConfigInput {
   explicitPath?: string;
   projectName?: string;
   projectDescription?: string;
-  storageType?: "sqlite" | "postgres";
   sqlitePath?: string;
-  databaseUrlEnv?: string;
   thresholdRules?: ThresholdRule[];
   metadataDefaults?: Record<string, unknown>;
   force?: boolean;
@@ -72,15 +65,20 @@ export async function writeInitialConfig(
     );
   }
 
-  const storageType =
-    input.storageType ?? (input.databaseUrlEnv !== undefined ? "postgres" : "sqlite");
   const config: BenchmarkAnalyzerConfig = {
     projectName: nonEmptyOrDefault(
       input.projectName,
       basename(cwd) || "benchmark-project",
       "project name",
     ),
-    storage: buildInitialStorageConfig(input, storageType),
+    storage: {
+      type: "sqlite",
+      path: nonEmptyOrDefault(
+        input.sqlitePath,
+        DEFAULT_SQLITE_STORAGE_PATH,
+        "SQLite storage path",
+      ),
+    },
     thresholdRules: input.thresholdRules ?? [],
     metadataDefaults: input.metadataDefaults ?? {},
   };
@@ -126,23 +124,14 @@ function normalizeConfig(
 
     const storageType = requiredString(value.storage.type, "storage.type", configPath);
 
-    if (storageType === "sqlite") {
-      config.storage = {
-        type: "sqlite",
-        path: requiredString(value.storage.path, "storage.path", configPath),
-      };
-    } else if (storageType === "postgres") {
-      config.storage = {
-        type: "postgres",
-        databaseUrlEnv: requiredString(
-          value.storage.databaseUrlEnv,
-          "storage.databaseUrlEnv",
-          configPath,
-        ),
-      };
-    } else {
+    if (storageType !== "sqlite") {
       throw new CliError(`Unsupported config storage.type "${storageType}"`);
     }
+
+    config.storage = {
+      type: "sqlite",
+      path: requiredString(value.storage.path, "storage.path", configPath),
+    };
   }
 
   if (value.thresholdRules !== undefined) {
@@ -162,39 +151,6 @@ function normalizeConfig(
   }
 
   return config;
-}
-
-function buildInitialStorageConfig(
-  input: WriteInitialConfigInput,
-  storageType: "sqlite" | "postgres",
-): BenchmarkAnalyzerStorageConfig {
-  if (storageType === "sqlite") {
-    if (input.databaseUrlEnv !== undefined) {
-      throw new CliError("Init --database-url-env can only be used with --storage postgres");
-    }
-
-    return {
-      type: "sqlite",
-      path: nonEmptyOrDefault(
-        input.sqlitePath,
-        DEFAULT_SQLITE_STORAGE_PATH,
-        "SQLite storage path",
-      ),
-    };
-  }
-
-  if (input.sqlitePath !== undefined) {
-    throw new CliError("Init --sqlite-path can only be used with --storage sqlite");
-  }
-
-  return {
-    type: "postgres",
-    databaseUrlEnv: nonEmptyOrDefault(
-      input.databaseUrlEnv,
-      "DATABASE_URL",
-      "database URL environment variable",
-    ),
-  };
 }
 
 function parseJson(raw: string, path: string): unknown {

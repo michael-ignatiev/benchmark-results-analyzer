@@ -2,24 +2,20 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 
-import { newDb } from "pg-mem";
-
 import {
   ComparisonValidationError,
   PersistedComparisonService,
-  PostgresComparisonRepository,
-  PostgresRunRepository,
   RunIngestionService,
-  applyPostgresSchema,
   createDefaultParserRegistry,
 } from "../dist/index.js";
+import { countRows, createRepositories } from "./sqlite-test-utils.mjs";
 
 const fixture = JSON.parse(
   await readFile(new URL("./fixtures/k6-summary.json", import.meta.url), "utf8"),
 );
 
 test("loads two persisted runs, compares them, stores comparison findings, and returns a summary", async () => {
-  const { pool, runRepository, comparisonRepository, comparisonService } = await createHarness();
+  const { database, runRepository, comparisonRepository, comparisonService } = await createHarness();
   const baseline = await ingestRun(runRepository, "baseline", fixture);
   const candidateFixture = candidateWithRegressionAndMissingMetric(fixture);
   const candidate = await ingestRun(runRepository, "candidate", candidateFixture);
@@ -90,14 +86,14 @@ test("loads two persisted runs, compares them, stores comparison findings, and r
   assert.equal(stored.findings.length, 20);
   assert.equal(finding(stored.findings, "http_req_duration", "p95", "ms").severity, "high");
 
-  assert.deepEqual(await tableCounts(pool), {
+  assert.deepEqual(tableCounts(database), {
     comparisons: 1,
     findings: 20,
   });
 });
 
 test("compareAndPersist rejects missing run ids before storing a comparison", async () => {
-  const { pool, comparisonService } = await createHarness();
+  const { database, comparisonService } = await createHarness();
 
   await assert.rejects(
     () =>
@@ -110,14 +106,14 @@ test("compareAndPersist rejects missing run ids before storing a comparison", as
       error.code === "COMPARISON_RUN_NOT_FOUND" &&
       error.message === 'Baseline run "999" was not found',
   );
-  assert.deepEqual(await tableCounts(pool), {
+  assert.deepEqual(tableCounts(database), {
     comparisons: 0,
     findings: 0,
   });
 });
 
 test("compareAndPersist rejects runs from different suites before storing a comparison", async () => {
-  const { pool, runRepository, comparisonService } = await createHarness();
+  const { database, runRepository, comparisonService } = await createHarness();
   const baseline = await ingestRun(runRepository, "baseline", fixture, {
     suite: {
       name: "checkout-load-test",
@@ -140,24 +136,19 @@ test("compareAndPersist rejects runs from different suites before storing a comp
       error.code === "COMPARISON_SUITE_MISMATCH" &&
       error.message === "Cannot compare runs from different suites",
   );
-  assert.deepEqual(await tableCounts(pool), {
+  assert.deepEqual(tableCounts(database), {
     comparisons: 0,
     findings: 0,
   });
 });
 
 async function createHarness() {
-  const database = newDb({ autoCreateForeignKeyIndices: true });
-  const adapter = database.adapters.createPg();
-  const pool = new adapter.Pool();
-  const runRepository = new PostgresRunRepository(pool);
-  const comparisonRepository = new PostgresComparisonRepository(pool);
+  const { database, runRepository, comparisonRepository } =
+    await createRepositories("bra-persisted-comparison-");
   const comparisonService = new PersistedComparisonService(runRepository, comparisonRepository);
 
-  await applyPostgresSchema(pool);
-
   return {
-    pool,
+    database,
     runRepository,
     comparisonRepository,
     comparisonService,
@@ -201,13 +192,8 @@ function finding(findings, metricName, aggregationType, unit) {
   return found;
 }
 
-async function tableCounts(pool) {
-  const comparisons = await countRows(pool, "benchmark_comparisons");
-  const findings = await countRows(pool, "benchmark_comparison_findings");
+function tableCounts(database) {
+  const comparisons = countRows(database, "benchmark_comparisons");
+  const findings = countRows(database, "benchmark_comparison_findings");
   return { comparisons, findings };
-}
-
-async function countRows(pool, tableName) {
-  const result = await pool.query(`SELECT COUNT(*) AS count FROM ${tableName}`);
-  return Number(result.rows[0].count);
 }

@@ -90,7 +90,7 @@ src/core/          Canonical model, parser registry, parsers, comparison engine,
 src/cli/           Commands, config loading, file handling, git metadata, terminal/report output
 src/runs/          Artifact ingestion service
 src/comparisons/   Persisted comparison orchestration
-src/persistence/   SQLite default storage and optional PostgreSQL repositories
+src/persistence/   SQLite storage repositories and schema setup
 demo/fixtures/       Local demo artifacts
 docs/                Architecture, rules, demo, and interview notes
 ```
@@ -305,13 +305,6 @@ By default, `init` writes:
 }
 ```
 
-PostgreSQL is still available as an optional shared/server storage adapter:
-
-```bash
-npm run cli -- init --storage postgres --database-url-env DATABASE_URL --project "Benchmark Demo"
-export DATABASE_URL="postgresql://user:password@localhost:5432/benchmark_results_analyzer"
-```
-
 ## Screenshots
 
 Suggested terminal screenshots:
@@ -323,8 +316,8 @@ Suggested terminal screenshots:
 
 ## Known Limitations
 
-- SQLite is the default local store; PostgreSQL remains optional and still uses startup schema application.
-- No migration framework; schema is applied from TypeScript-managed SQL at startup.
+- SQLite is the only built-in store; schema is applied from TypeScript-managed SQL at startup.
+- No migration framework yet.
 - No pagination for long-lived project, suite, run, or finding lists.
 - No background job queue for large imports or expensive comparisons.
 - Raw artifact files are not copied into durable object storage.
@@ -337,7 +330,6 @@ Suggested terminal screenshots:
 - Publish to the public npm registry with versioned release notes.
 - Add custom parser plugins.
 - Add project/suite-level threshold policies with inheritance.
-- Add Docker Compose for optional PostgreSQL and local demo bootstrapping.
 - Add database migrations and versioned schema management.
 - Add CI artifact adapters that call the same ingestion service.
 - Add repeated-run baseline statistics and variance-aware comparisons.
@@ -354,4 +346,4 @@ npm run demo:seed:dry-run
 npm run cli -- --help
 ```
 
-The tests use `node:test`, `supertest`, `better-sqlite3`, and `pg-mem` for integration coverage without requiring a real PostgreSQL instance.
+The tests use `node:test`, `supertest`, and `better-sqlite3` for parser, CLI, API, persistence, and integration coverage.

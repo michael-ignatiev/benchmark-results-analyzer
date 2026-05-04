@@ -1,12 +1,12 @@
 import { DynamicModule, Module } from "@nestjs/common";
+import type { Database as SqliteDatabase } from "better-sqlite3";
 import type { ComparisonRepository } from "../../persistence/comparison-repository.js";
-import { PostgresComparisonRepository } from "../../persistence/postgres/postgres-comparison.repository.js";
-import type { PgPoolLike } from "../../persistence/postgres/types.js";
+import { SqliteComparisonRepository } from "../../persistence/sqlite/sqlite-comparison.repository.js";
 import { ReportsController } from "./reports.controller.js";
 import { REPORT_COMPARISON_REPOSITORY } from "./reports.tokens.js";
 
 export interface ReportsModuleOptions {
-  database?: PgPoolLike;
+  database?: SqliteDatabase;
   comparisonRepository?: ComparisonRepository;
 }
 
@@ -28,7 +28,7 @@ export class ReportsModule {
               throw new Error("ReportsModule requires database or comparisonRepository");
             }
 
-            return new PostgresComparisonRepository(options.database);
+            return new SqliteComparisonRepository(options.database);
           },
         },
       ],

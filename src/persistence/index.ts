@@ -27,5 +27,4 @@ export type {
   SuiteMetricKey,
   SuiteRunListItem,
 } from "./run-repository.js";
-export * from "./postgres/index.js";
 export * from "./sqlite/index.js";

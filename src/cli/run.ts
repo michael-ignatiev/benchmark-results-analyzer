@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { basename, relative, resolve } from "node:path";
 
-import type { PgPoolLike } from "../persistence/postgres/index.js";
 import {
   SOURCE_TYPES,
   compareRuns,
@@ -10,9 +9,6 @@ import {
   type SourceType,
   type ThresholdRule,
 } from "../core/index.js";
-import { PostgresComparisonRepository } from "../persistence/postgres/postgres-comparison.repository.js";
-import { PostgresRunRepository } from "../persistence/postgres/postgres-run.repository.js";
-import { applyPostgresSchema } from "../persistence/postgres/schema.js";
 import {
   openSqliteDatabase,
   SqliteComparisonRepository,
@@ -57,10 +53,6 @@ import {
 } from "./format.js";
 import { collectGitMetadata, type ExecFile } from "./git.js";
 
-export interface CliDatabase extends PgPoolLike {
-  end?: () => Promise<void>;
-}
-
 interface CliStorage {
   runRepository: RunRepository;
   comparisonRepository: ComparisonRepository;
@@ -72,8 +64,6 @@ export interface CliRuntime {
   env: Record<string, string | undefined>;
   stdout: (message: string) => void;
   stderr: (message: string) => void;
-  database?: CliDatabase;
-  createDatabase?: (connectionString: string) => CliDatabase;
   execFile?: ExecFile;
 }
 
@@ -123,9 +113,7 @@ async function runInit(args: ParsedCliArgs, runtime: CliRuntime): Promise<void> 
   const explicitPath = getStringOption(args, "config");
   const projectName = getStringOption(args, "project");
   const projectDescription = getStringOption(args, "project-description");
-  const storageType = parseStorageType(getStringOption(args, "storage"));
   const sqlitePath = getStringOption(args, "sqlite-path");
-  const databaseUrlEnv = getStringOption(args, "database-url-env");
   const metadataDefaults = parseMetadataOptions(getStringOptions(args, "metadata"));
   const thresholdRules = await loadThresholdRulesFileOption(args, runtime);
 
@@ -141,16 +129,8 @@ async function runInit(args: ParsedCliArgs, runtime: CliRuntime): Promise<void> 
     input.projectDescription = projectDescription;
   }
 
-  if (storageType !== undefined) {
-    input.storageType = storageType;
-  }
-
   if (sqlitePath !== undefined) {
     input.sqlitePath = sqlitePath;
-  }
-
-  if (databaseUrlEnv !== undefined) {
-    input.databaseUrlEnv = databaseUrlEnv;
   }
 
   if (Object.keys(metadataDefaults).length > 0) {
@@ -419,53 +399,17 @@ async function openStorage(
   runtime: CliRuntime,
   config: BenchmarkAnalyzerConfig,
 ): Promise<CliStorage> {
-  if (runtime.database !== undefined) {
-    await applyPostgresSchema(runtime.database);
-    return {
-      runRepository: new PostgresRunRepository(runtime.database),
-      comparisonRepository: new PostgresComparisonRepository(runtime.database),
-      close: async () => {},
-    };
-  }
-
   const storage = config.storage ?? {
     type: "sqlite" as const,
     path: DEFAULT_SQLITE_STORAGE_PATH,
   };
-
-  if (storage.type === "sqlite") {
-    const database = await openSqliteDatabase(resolve(runtime.cwd, storage.path));
-
-    return {
-      runRepository: new SqliteRunRepository(database),
-      comparisonRepository: new SqliteComparisonRepository(database),
-      close: async () => {
-        database.close();
-      },
-    };
-  }
-
-  const envName = storage.databaseUrlEnv;
-  const connectionString = runtime.env[envName];
-
-  if (connectionString === undefined || connectionString.trim().length === 0) {
-    throw new CliError(
-      `${envName} is required for Postgres storage. Run "benchmark-analyzer init" to create local config, or use SQLite storage.`,
-    );
-  }
-
-  if (runtime.createDatabase === undefined) {
-    throw new CliError("CLI database factory is not configured");
-  }
-
-  const database = runtime.createDatabase(connectionString);
-  await applyPostgresSchema(database);
+  const database = await openSqliteDatabase(resolve(runtime.cwd, storage.path));
 
   return {
-    runRepository: new PostgresRunRepository(database),
-    comparisonRepository: new PostgresComparisonRepository(database),
+    runRepository: new SqliteRunRepository(database),
+    comparisonRepository: new SqliteComparisonRepository(database),
     close: async () => {
-      await database.end?.();
+      database.close();
     },
   };
 }
@@ -952,18 +896,6 @@ function parseSourceType(value: string | undefined): SourceType | undefined {
   return value as SourceType;
 }
 
-function parseStorageType(value: string | undefined): "sqlite" | "postgres" | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (value !== "sqlite" && value !== "postgres") {
-    throw new CliError('Unsupported storage type. Use "sqlite" or "postgres".');
-  }
-
-  return value;
-}
-
 async function loadThresholdRules(
   args: ParsedCliArgs,
   runtime: CliRuntime,
@@ -1064,9 +996,9 @@ function helpText(command?: string): string {
     return [
       "Usage: benchmark-analyzer init [--project name] [--config path] [--force]",
       "",
-      "Options: --project-description, --storage sqlite|postgres, --sqlite-path path, --database-url-env, --thresholds thresholds.json, --metadata key=value",
+      "Options: --project-description, --sqlite-path path, --thresholds thresholds.json, --metadata key=value",
       "",
-      "Creates .benchmark-analyzer.json for local CLI defaults. SQLite is the default storage.",
+      "Creates .benchmark-analyzer.json for local CLI defaults.",
     ].join("\n");
   }
 

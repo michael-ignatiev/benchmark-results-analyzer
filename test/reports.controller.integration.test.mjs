@@ -4,18 +4,15 @@ import { readFile } from "node:fs/promises";
 import { afterEach, test } from "node:test";
 
 import { Test } from "@nestjs/testing";
-import { newDb } from "pg-mem";
 
 import {
   PersistedComparisonService,
-  PostgresComparisonRepository,
-  PostgresRunRepository,
   ReportsController,
   ReportsModule,
   RunIngestionService,
-  applyPostgresSchema,
   createDefaultParserRegistry,
 } from "../dist/index.js";
+import { createRepositories } from "./sqlite-test-utils.mjs";
 
 const fixture = JSON.parse(
   await readFile(new URL("./fixtures/k6-summary.json", import.meta.url), "utf8"),
@@ -189,14 +186,9 @@ test("GET /reports/:comparisonId returns 404 when the comparison does not exist"
 });
 
 async function createApp() {
-  const database = newDb({ autoCreateForeignKeyIndices: true });
-  const adapter = database.adapters.createPg();
-  const pool = new adapter.Pool();
-  const runRepository = new PostgresRunRepository(pool);
-  const comparisonRepository = new PostgresComparisonRepository(pool);
+  const { database, runRepository, comparisonRepository } =
+    await createRepositories("bra-reports-api-");
   const comparisonService = new PersistedComparisonService(runRepository, comparisonRepository);
-
-  await applyPostgresSchema(pool);
 
   const moduleRef = await Test.createTestingModule({
     imports: [
@@ -212,7 +204,7 @@ async function createApp() {
 
   return {
     app,
-    pool,
+    database,
     runRepository,
     comparisonRepository,
     comparisonService,

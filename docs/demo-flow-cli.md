@@ -332,8 +332,6 @@ rm -rf .benchmark-analyzer
 rm -rf demo/output
 ```
 
-If you explicitly configured PostgreSQL storage, remove the demo project from that shared database manually or rerun the seed script with reset behavior before the next demo.
-
 ## Interview Close
 
 Use this summary:

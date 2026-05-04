@@ -1,8 +1,8 @@
 import { DynamicModule, Module } from "@nestjs/common";
+import type { Database as SqliteDatabase } from "better-sqlite3";
 import { createDefaultParserRegistry } from "../../parsers/default-parser-registry.js";
-import { PostgresRunRepository } from "../../persistence/postgres/postgres-run.repository.js";
-import type { PgPoolLike } from "../../persistence/postgres/types.js";
 import type { RunRepository } from "../../persistence/run-repository.js";
+import { SqliteRunRepository } from "../../persistence/sqlite/sqlite-run.repository.js";
 import { RunIngestionService } from "../../runs/run-ingestion.service.js";
 import { RunsUploadController } from "./runs-upload.controller.js";
 import {
@@ -12,7 +12,7 @@ import {
 } from "./runs-upload.tokens.js";
 
 export interface RunsUploadModuleOptions {
-  database?: PgPoolLike;
+  database?: SqliteDatabase;
   runRepository?: RunRepository;
 }
 
@@ -38,7 +38,7 @@ export class RunsUploadModule {
               throw new Error("RunsUploadModule requires database or runRepository");
             }
 
-            return new PostgresRunRepository(options.database);
+            return new SqliteRunRepository(options.database);
           },
         },
         {

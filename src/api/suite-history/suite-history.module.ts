@@ -1,12 +1,12 @@
 import { DynamicModule, Module } from "@nestjs/common";
-import { PostgresRunRepository } from "../../persistence/postgres/postgres-run.repository.js";
-import type { PgPoolLike } from "../../persistence/postgres/types.js";
+import type { Database as SqliteDatabase } from "better-sqlite3";
 import type { RunRepository } from "../../persistence/run-repository.js";
+import { SqliteRunRepository } from "../../persistence/sqlite/sqlite-run.repository.js";
 import { SuiteHistoryController } from "./suite-history.controller.js";
 import { SUITE_HISTORY_RUN_REPOSITORY } from "./suite-history.tokens.js";
 
 export interface SuiteHistoryModuleOptions {
-  database?: PgPoolLike;
+  database?: SqliteDatabase;
   runRepository?: RunRepository;
 }
 
@@ -28,7 +28,7 @@ export class SuiteHistoryModule {
               throw new Error("SuiteHistoryModule requires database or runRepository");
             }
 
-            return new PostgresRunRepository(options.database);
+            return new SqliteRunRepository(options.database);
           },
         },
       ],

@@ -3,26 +3,18 @@ import { readFile } from "node:fs/promises";
 import { basename, dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import pg from "pg";
-
 import {
   PersistedComparisonService,
-  PostgresComparisonRepository,
-  PostgresRunRepository,
   RunIngestionService,
   SqliteComparisonRepository,
   SqliteRunRepository,
-  applyPostgresSchema,
   createDefaultParserRegistry,
   openSqliteDatabase,
 } from "../dist/index.js";
 
-const { Pool } = pg;
-
 const parsedArgs = parseArgs(process.argv.slice(2));
 const dryRun = parsedArgs.flags.has("--dry-run");
 const resetDemo = parsedArgs.flags.has("--reset-demo") || parsedArgs.flags.has("--reset");
-const storageType = parseStorageType(parsedArgs.options.get("--storage") ?? "sqlite");
 const sqlitePath = parsedArgs.options.get("--sqlite-path") ?? ".benchmark-analyzer/runs.db";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -59,7 +51,7 @@ async function main() {
     return;
   }
 
-  const storage = await openStorage(storageType, sqlitePath);
+  const storage = await openStorage(sqlitePath);
 
   try {
     if (resetDemo) {
@@ -125,37 +117,14 @@ async function main() {
   }
 }
 
-async function openStorage(type, sqlitePath) {
-  if (type === "sqlite") {
-    const database = await openSqliteDatabase(resolve(rootDir, sqlitePath));
-
-    return {
-      runRepository: new SqliteRunRepository(database),
-      comparisonRepository: new SqliteComparisonRepository(database),
-      resetDemoProjects: async (projectNames) => resetSqliteDemoProjects(database, projectNames),
-      close: async () => {
-        database.close();
-      },
-    };
-  }
-
-  const databaseUrl = process.env.DATABASE_URL;
-
-  if (databaseUrl === undefined || databaseUrl.trim().length === 0) {
-    throw new Error(
-      "DATABASE_URL is required for --storage postgres. Omit --storage postgres to use local SQLite.",
-    );
-  }
-
-  const pool = new Pool({ connectionString: databaseUrl });
-  await applyPostgresSchema(pool);
-
+async function openStorage(sqlitePath) {
+  const database = await openSqliteDatabase(resolve(rootDir, sqlitePath));
   return {
-    runRepository: new PostgresRunRepository(pool),
-    comparisonRepository: new PostgresComparisonRepository(pool),
-    resetDemoProjects: async (projectNames) => resetPostgresDemoProjects(pool, projectNames),
+    runRepository: new SqliteRunRepository(database),
+    comparisonRepository: new SqliteComparisonRepository(database),
+    resetDemoProjects: async (projectNames) => resetSqliteDemoProjects(database, projectNames),
     close: async () => {
-      await pool.end();
+      database.close();
     },
   };
 }
@@ -342,15 +311,6 @@ function validatePlannedComparisons(manifest, plannedRuns) {
   }
 }
 
-async function resetPostgresDemoProjects(pool, projectNames) {
-  const result = await pool.query(
-    "DELETE FROM benchmark_projects WHERE name = ANY($1::text[])",
-    [projectNames],
-  );
-
-  return result.rowCount ?? 0;
-}
-
 async function resetSqliteDemoProjects(database, projectNames) {
   const statement = database.prepare("DELETE FROM benchmark_projects WHERE name = ?");
   let deleted = 0;
@@ -422,21 +382,17 @@ function printImportResult(manifest, importedRuns, importedComparisons) {
 }
 
 function printUsage() {
-  console.log(`Usage: node scripts/import-demo-dataset.mjs [--dry-run] [--reset-demo] [--storage sqlite|postgres]
+  console.log(`Usage: node scripts/import-demo-dataset.mjs [--dry-run] [--reset-demo] [--sqlite-path path]
 
 Options:
   --dry-run            Validate and summarize demo fixtures without writing storage.
   --reset-demo         Delete the demo project named in the manifest before importing.
-  --storage type       Use sqlite (default) or postgres.
-  --sqlite-path path   SQLite database path relative to the package root.
-
-Environment:
-  DATABASE_URL         PostgreSQL connection string used with --storage postgres.`);
+  --sqlite-path path   SQLite database path relative to the package root.`);
 }
 
 function parseArgs(argv) {
   const knownFlags = new Set(["--dry-run", "--help", "-h", "--reset-demo", "--reset"]);
-  const knownOptions = new Set(["--storage", "--sqlite-path"]);
+  const knownOptions = new Set(["--sqlite-path"]);
   const flags = new Set();
   const options = new Map();
   const unknown = [];
@@ -465,14 +421,6 @@ function parseArgs(argv) {
   }
 
   return { flags, options, unknown };
-}
-
-function parseStorageType(value) {
-  if (value !== "sqlite" && value !== "postgres") {
-    throw new Error('Storage must be "sqlite" or "postgres".');
-  }
-
-  return value;
 }
 
 function suiteSignature(parsed) {

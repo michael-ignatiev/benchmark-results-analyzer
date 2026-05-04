@@ -34,8 +34,7 @@ Report generation
 
 Persistence adapters
   -> store projects, suites, runs, metrics, comparisons, and findings
-  -> SQLite is the default CLI store
-  -> PostgreSQL is optional for shared/server workflows
+  -> SQLite is the built-in CLI store
 ```
 
 The CLI is the product surface. Core logic does not depend on terminal rendering, HTTP controllers, or UI code.
@@ -173,7 +172,7 @@ Design choices:
 - comparisons store baseline/candidate run IDs, threshold rules, and summary JSON
 - findings store metric-level comparison results
 
-The CLI uses `src/persistence/sqlite/*` by default and writes a local `.benchmark-analyzer/runs.db` file. The existing PostgreSQL adapter in `src/persistence/postgres/*` keeps the same repository contracts for shared databases or server/API usage. Both schemas should move to versioned migrations before production use.
+The CLI uses `src/persistence/sqlite/*` and writes a local `.benchmark-analyzer/runs.db` file. The schema is currently applied at startup; it should move to versioned SQLite migrations before production use.
 
 ## Comparison Engine
 
@@ -251,7 +250,7 @@ Benefits:
 - no browser form state or multipart transport concerns
 - no premature artifact storage service
 - direct fit for npm package distribution
-- easy to test with fixtures, SQLite, and pg-mem
+- easy to test with fixtures and SQLite
 - clear interview story: artifacts in, deterministic findings out
 
 This keeps complexity focused on the hard parts: normalization, metric identity, thresholding, missing metric handling, and deterministic reporting.
@@ -264,7 +263,7 @@ The design can scale without changing the core invariant:
 - Add object storage for raw artifacts and persist artifact URLs.
 - Add a job queue for large imports or slow comparisons.
 - Promote threshold rules to project/suite-level policies.
-- Replace startup schema application with migrations for both SQLite and PostgreSQL.
+- Replace startup schema application with SQLite migrations.
 - Add repeated-run baseline statistics and variance-aware comparison.
 - Add parser plugins for custom benchmark formats.
 - Add CLI-generated HTML/PDF reports if richer presentation is needed.

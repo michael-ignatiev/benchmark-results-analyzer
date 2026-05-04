@@ -1,6 +1,6 @@
 import { DynamicModule, Module } from "@nestjs/common";
+import type { Database as SqliteDatabase } from "better-sqlite3";
 import type { ComparisonRepository } from "../persistence/comparison-repository.js";
-import type { PgPoolLike } from "../persistence/postgres/types.js";
 import type { RunRepository } from "../persistence/run-repository.js";
 import { CatalogModule } from "./catalog/catalog.module.js";
 import { ComparisonsModule } from "./comparisons/comparisons.module.js";
@@ -8,7 +8,7 @@ import { ReportsModule } from "./reports/reports.module.js";
 import { SuiteHistoryModule } from "./suite-history/suite-history.module.js";
 
 export interface ApiModuleOptions {
-  database?: PgPoolLike;
+  database?: SqliteDatabase;
   runRepository?: RunRepository;
   comparisonRepository?: ComparisonRepository;
 }

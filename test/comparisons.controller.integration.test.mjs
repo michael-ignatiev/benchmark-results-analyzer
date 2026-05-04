@@ -4,17 +4,14 @@ import { readFile } from "node:fs/promises";
 import { afterEach, test } from "node:test";
 
 import { Test } from "@nestjs/testing";
-import { newDb } from "pg-mem";
 
 import {
   ComparisonsController,
   ComparisonsModule,
-  PostgresComparisonRepository,
-  PostgresRunRepository,
   RunIngestionService,
-  applyPostgresSchema,
   createDefaultParserRegistry,
 } from "../dist/index.js";
+import { countRows, createRepositories } from "./sqlite-test-utils.mjs";
 
 const fixture = JSON.parse(
   await readFile(new URL("./fixtures/k6-summary.json", import.meta.url), "utf8"),
@@ -125,7 +122,7 @@ test("POST /comparisons returns 400 for invalid request bodies", async () => {
 });
 
 test("POST /comparisons maps missing runs and suite mismatches to API errors", async () => {
-  const { controller, pool, runRepository } = await createApp();
+  const { controller, database, runRepository } = await createApp();
 
   await expectHttpError(
     () =>
@@ -159,8 +156,8 @@ test("POST /comparisons maps missing runs and suite mismatches to API errors", a
     "COMPARISON_SUITE_MISMATCH",
     "Cannot compare runs from different suites",
   );
-  assert.equal(await countRows(pool, "benchmark_comparisons"), 0);
-  assert.equal(await countRows(pool, "benchmark_comparison_findings"), 0);
+  assert.equal(countRows(database, "benchmark_comparisons"), 0);
+  assert.equal(countRows(database, "benchmark_comparison_findings"), 0);
 });
 
 test("GET /comparisons/:id returns 404 when the comparison does not exist", async () => {
@@ -175,13 +172,8 @@ test("GET /comparisons/:id returns 404 when the comparison does not exist", asyn
 });
 
 async function createApp() {
-  const database = newDb({ autoCreateForeignKeyIndices: true });
-  const adapter = database.adapters.createPg();
-  const pool = new adapter.Pool();
-  const runRepository = new PostgresRunRepository(pool);
-  const comparisonRepository = new PostgresComparisonRepository(pool);
-
-  await applyPostgresSchema(pool);
+  const { database, runRepository, comparisonRepository } =
+    await createRepositories("bra-comparisons-api-");
 
   const moduleRef = await Test.createTestingModule({
     imports: [
@@ -198,7 +190,7 @@ async function createApp() {
 
   return {
     app,
-    pool,
+    database,
     runRepository,
     comparisonRepository,
     controller: app.get(ComparisonsController),
@@ -240,11 +232,6 @@ function finding(findings, metricName, aggregationType, unit) {
 
   assert.ok(found, `Expected finding ${metricName}:${aggregationType}:${unit}`);
   return found;
-}
-
-async function countRows(pool, tableName) {
-  const result = await pool.query(`SELECT COUNT(*) AS count FROM ${tableName}`);
-  return Number(result.rows[0].count);
 }
 
 async function expectHttpError(operation, status, code, message) {

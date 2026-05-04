@@ -1,10 +1,10 @@
 import { DynamicModule, Module } from "@nestjs/common";
+import type { Database as SqliteDatabase } from "better-sqlite3";
 import { PersistedComparisonService } from "../../comparisons/persisted-comparison.service.js";
 import type { ComparisonRepository } from "../../persistence/comparison-repository.js";
-import { PostgresComparisonRepository } from "../../persistence/postgres/postgres-comparison.repository.js";
-import { PostgresRunRepository } from "../../persistence/postgres/postgres-run.repository.js";
-import type { PgPoolLike } from "../../persistence/postgres/types.js";
 import type { RunRepository } from "../../persistence/run-repository.js";
+import { SqliteComparisonRepository } from "../../persistence/sqlite/sqlite-comparison.repository.js";
+import { SqliteRunRepository } from "../../persistence/sqlite/sqlite-run.repository.js";
 import { ComparisonsController } from "./comparisons.controller.js";
 import {
   COMPARISON_REPOSITORY,
@@ -13,7 +13,7 @@ import {
 } from "./comparisons.tokens.js";
 
 export interface ComparisonsModuleOptions {
-  database?: PgPoolLike;
+  database?: SqliteDatabase;
   runRepository?: RunRepository;
   comparisonRepository?: ComparisonRepository;
 }
@@ -36,7 +36,7 @@ export class ComparisonsModule {
               throw new Error("ComparisonsModule requires database or runRepository");
             }
 
-            return new PostgresRunRepository(options.database);
+            return new SqliteRunRepository(options.database);
           },
         },
         {
@@ -50,7 +50,7 @@ export class ComparisonsModule {
               throw new Error("ComparisonsModule requires database or comparisonRepository");
             }
 
-            return new PostgresComparisonRepository(options.database);
+            return new SqliteComparisonRepository(options.database);
           },
         },
         {

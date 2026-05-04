@@ -4,14 +4,12 @@ import { readFile } from "node:fs/promises";
 import { afterEach, test } from "node:test";
 
 import { Test } from "@nestjs/testing";
-import { newDb } from "pg-mem";
 
 import {
-  PostgresRunRepository,
   RunsUploadController,
   RunsUploadModule,
-  applyPostgresSchema,
 } from "../dist/index.js";
+import { countRows, createRunRepository } from "./sqlite-test-utils.mjs";
 
 const fixtureContent = await readFile(
   new URL("./fixtures/k6-summary.json", import.meta.url),
@@ -143,7 +141,7 @@ test("POST /runs/upload returns 400 for invalid JSON metadata fields", async () 
 });
 
 test("POST /runs/upload returns 400 when no parser can handle the file", async () => {
-  const { controller, pool } = await createApp();
+  const { controller, database } = await createApp();
 
   await expectBadRequest(
     () =>
@@ -153,7 +151,7 @@ test("POST /runs/upload returns 400 when no parser can handle the file", async (
     "PARSER_NOT_FOUND",
     "Unable to find a parser for the provided benchmark payload",
   );
-  assert.deepEqual(await tableCounts(pool), {
+  assert.deepEqual(tableCounts(database), {
     projects: 0,
     suites: 0,
     runs: 0,
@@ -162,12 +160,7 @@ test("POST /runs/upload returns 400 when no parser can handle the file", async (
 });
 
 async function createApp() {
-  const database = newDb({ autoCreateForeignKeyIndices: true });
-  const adapter = database.adapters.createPg();
-  const pool = new adapter.Pool();
-  const repository = new PostgresRunRepository(pool);
-
-  await applyPostgresSchema(pool);
+  const { database, repository } = await createRunRepository("bra-runs-upload-");
 
   const moduleRef = await Test.createTestingModule({
     imports: [RunsUploadModule.register({ runRepository: repository })],
@@ -179,24 +172,19 @@ async function createApp() {
 
   return {
     app,
-    pool,
+    database,
     repository,
     controller: app.get(RunsUploadController),
   };
 }
 
-async function tableCounts(pool) {
-  const projects = await countRows(pool, "benchmark_projects");
-  const suites = await countRows(pool, "benchmark_suites");
-  const runs = await countRows(pool, "benchmark_runs");
-  const metrics = await countRows(pool, "benchmark_metrics");
+function tableCounts(database) {
+  const projects = countRows(database, "benchmark_projects");
+  const suites = countRows(database, "benchmark_suites");
+  const runs = countRows(database, "benchmark_runs");
+  const metrics = countRows(database, "benchmark_metrics");
 
   return { projects, suites, runs, metrics };
-}
-
-async function countRows(pool, tableName) {
-  const result = await pool.query(`SELECT COUNT(*) AS count FROM ${tableName}`);
-  return Number(result.rows[0].count);
 }
 
 function file(filename, content) {

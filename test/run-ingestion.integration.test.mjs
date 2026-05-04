@@ -2,15 +2,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 
-import { newDb } from "pg-mem";
-
 import {
   ParserValidationError,
-  PostgresRunRepository,
   RunIngestionService,
-  applyPostgresSchema,
   createDefaultParserRegistry,
 } from "../dist/index.js";
+import { countRows, createRunRepository } from "./sqlite-test-utils.mjs";
 
 const fixtureContent = await readFile(
   new URL("./fixtures/k6-summary.json", import.meta.url),
@@ -18,7 +15,7 @@ const fixtureContent = await readFile(
 );
 
 test("ingests a benchmark artifact, parses it, and persists run metrics", async () => {
-  const { pool, repository } = await createRepository();
+  const { database, repository } = await createRunRepository("bra-run-ingestion-");
   const service = new RunIngestionService(createDefaultParserRegistry(), repository);
 
   const result = await service.ingestBenchmarkArtifact({
@@ -82,7 +79,7 @@ test("ingests a benchmark artifact, parses it, and persists run metrics", async 
     },
   });
 
-  const persistedCounts = await tableCounts(pool);
+  const persistedCounts = tableCounts(database);
   assert.deepEqual(persistedCounts, {
     projects: 1,
     suites: 1,
@@ -92,7 +89,7 @@ test("ingests a benchmark artifact, parses it, and persists run metrics", async 
 });
 
 test("subsequent imports for the same parsed suite reuse the stored suite", async () => {
-  const { pool, repository } = await createRepository();
+  const { database, repository } = await createRunRepository("bra-run-ingestion-");
   const service = new RunIngestionService(createDefaultParserRegistry(), repository);
 
   const baseline = await service.ingestBenchmarkArtifact({
@@ -119,7 +116,7 @@ test("subsequent imports for the same parsed suite reuse the stored suite", asyn
   assert.equal(candidate.persistedRun.projectId, baseline.persistedRun.projectId);
   assert.equal(candidate.persistedRun.suiteId, baseline.persistedRun.suiteId);
   assert.notEqual(candidate.persistedRun.runId, baseline.persistedRun.runId);
-  assert.deepEqual(await tableCounts(pool), {
+  assert.deepEqual(tableCounts(database), {
     projects: 1,
     suites: 1,
     runs: 2,
@@ -128,7 +125,7 @@ test("subsequent imports for the same parsed suite reuse the stored suite", asyn
 });
 
 test("invalid benchmark artifacts fail before persistence", async () => {
-  const { pool, repository } = await createRepository();
+  const { database, repository } = await createRunRepository("bra-run-ingestion-");
   const service = new RunIngestionService(createDefaultParserRegistry(), repository);
 
   await assert.rejects(
@@ -141,7 +138,7 @@ test("invalid benchmark artifacts fail before persistence", async () => {
       error instanceof ParserValidationError &&
       error.message === "Unable to find a parser for the provided benchmark payload",
   );
-  assert.deepEqual(await tableCounts(pool), {
+  assert.deepEqual(tableCounts(database), {
     projects: 0,
     suites: 0,
     runs: 0,
@@ -149,31 +146,13 @@ test("invalid benchmark artifacts fail before persistence", async () => {
   });
 });
 
-async function createRepository() {
-  const database = newDb({ autoCreateForeignKeyIndices: true });
-  const adapter = database.adapters.createPg();
-  const pool = new adapter.Pool();
-
-  await applyPostgresSchema(pool);
-
-  return {
-    pool,
-    repository: new PostgresRunRepository(pool),
-  };
-}
-
-async function tableCounts(pool) {
-  const projects = await countRows(pool, "benchmark_projects");
-  const suites = await countRows(pool, "benchmark_suites");
-  const runs = await countRows(pool, "benchmark_runs");
-  const metrics = await countRows(pool, "benchmark_metrics");
+function tableCounts(database) {
+  const projects = countRows(database, "benchmark_projects");
+  const suites = countRows(database, "benchmark_suites");
+  const runs = countRows(database, "benchmark_runs");
+  const metrics = countRows(database, "benchmark_metrics");
 
   return { projects, suites, runs, metrics };
-}
-
-async function countRows(pool, tableName) {
-  const result = await pool.query(`SELECT COUNT(*) AS count FROM ${tableName}`);
-  return Number(result.rows[0].count);
 }
 
 function metric(metrics, metricName, aggregationType, unit) {

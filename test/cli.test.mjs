@@ -4,10 +4,9 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { test } from "node:test";
 
-import { newDb } from "pg-mem";
-
-import { PostgresRunRepository } from "../dist/index.js";
+import { openSqliteDatabase, SqliteRunRepository } from "../dist/index.js";
 import { runCli } from "../dist/cli/run.js";
+import { countRows as countSqliteRows } from "./sqlite-test-utils.mjs";
 
 const k6Fixture = JSON.parse(
   await readFile(new URL("./fixtures/k6-summary.json", import.meta.url), "utf8"),
@@ -57,8 +56,8 @@ test("CLI init supports explicit config defaults and protects existing config", 
         "CLI Demo",
         "--project-description",
         "CLI demo benchmarks",
-        "--database-url-env",
-        "BENCHMARK_DATABASE_URL",
+        "--sqlite-path",
+        "custom-runs.db",
         "--thresholds",
         thresholdsPath,
         "--metadata",
@@ -77,8 +76,8 @@ test("CLI init supports explicit config defaults and protects existing config", 
     projectName: "CLI Demo",
     projectDescription: "CLI demo benchmarks",
     storage: {
-      type: "postgres",
-      databaseUrlEnv: "BENCHMARK_DATABASE_URL",
+      type: "sqlite",
+      path: "custom-runs.db",
     },
     thresholdRules: [
       {
@@ -114,7 +113,7 @@ test("CLI init supports explicit config defaults and protects existing config", 
   assert.deepEqual(overwritten.metadataDefaults, {});
 });
 
-test("CLI uses local SQLite storage by default without DATABASE_URL", async () => {
+test("CLI uses local SQLite storage by default", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "bra-cli-sqlite-flow-"));
   const baselinePath = join(cwd, "baseline.json");
   const candidatePath = join(cwd, "candidate.json");
@@ -203,7 +202,6 @@ test("CLI uses local SQLite storage by default without DATABASE_URL", async () =
 
 test("CLI imports runs, compares, reports, and returns history using shared services", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "bra-cli-flow-"));
-  const pool = await createPool();
   const baselinePath = join(cwd, "baseline.json");
   const candidatePath = join(cwd, "candidate.json");
   const thresholdsPath = join(cwd, "thresholds.json");
@@ -237,7 +235,6 @@ test("CLI imports runs, compares, reports, and returns history using shared serv
       "--json",
     ],
     cwd,
-    pool,
   );
   const candidate = await runJson(
     [
@@ -253,7 +250,6 @@ test("CLI imports runs, compares, reports, and returns history using shared serv
       "--json",
     ],
     cwd,
-    pool,
   );
 
   assert.equal(baseline.sourceType, "k6");
@@ -272,7 +268,6 @@ test("CLI imports runs, compares, reports, and returns history using shared serv
       "--json",
     ],
     cwd,
-    pool,
   );
 
   assert.ok(comparison.comparisonId);
@@ -283,7 +278,6 @@ test("CLI imports runs, compares, reports, and returns history using shared serv
   const report = await runJson(
     ["report", "--comparison-id", comparison.comparisonId, "--format", "json"],
     cwd,
-    pool,
   );
 
   assert.match(report.summaryText, /Compared 20 metrics/);
@@ -300,7 +294,6 @@ test("CLI imports runs, compares, reports, and returns history using shared serv
       "--json",
     ],
     cwd,
-    pool,
   );
 
   assert.equal(history.series.length, 1);
@@ -314,7 +307,6 @@ test("CLI imports runs, compares, reports, and returns history using shared serv
 
 test("CLI history shows recent runs and default key metric trends by suite name", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "bra-cli-history-text-"));
-  const pool = await createPool();
   const oldPath = join(cwd, "old.json");
   const previousPath = join(cwd, "previous.json");
   const latestPath = join(cwd, "latest.json");
@@ -342,7 +334,6 @@ test("CLI history shows recent runs and default key metric trends by suite name"
       "--json",
     ],
     cwd,
-    pool,
   );
   const previous = await runJson(
     [
@@ -363,7 +354,6 @@ test("CLI history shows recent runs and default key metric trends by suite name"
       "--json",
     ],
     cwd,
-    pool,
   );
   const latest = await runJson(
     [
@@ -384,9 +374,8 @@ test("CLI history shows recent runs and default key metric trends by suite name"
       "--json",
     ],
     cwd,
-    pool,
   );
-  const { runtime, stdout, stderr } = createRuntime(cwd, pool);
+  const { runtime, stdout, stderr } = createRuntime(cwd);
 
   assert.equal(
     await runCli(["history", "--suite", "checkout-load-test", "--limit", "2"], runtime),
@@ -420,7 +409,6 @@ test("CLI history shows recent runs and default key metric trends by suite name"
 
 test("CLI history returns filtered JSON trends and validates history options", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "bra-cli-history-json-"));
-  const pool = await createPool();
   const baselinePath = join(cwd, "baseline.json");
   const candidatePath = join(cwd, "candidate.json");
   const branchPath = join(cwd, "branch.json");
@@ -448,7 +436,6 @@ test("CLI history returns filtered JSON trends and validates history options", a
       "--json",
     ],
     cwd,
-    pool,
   );
   const candidate = await runJson(
     [
@@ -469,7 +456,6 @@ test("CLI history returns filtered JSON trends and validates history options", a
       "--json",
     ],
     cwd,
-    pool,
   );
 
   await runJson(
@@ -491,7 +477,6 @@ test("CLI history returns filtered JSON trends and validates history options", a
       "--json",
     ],
     cwd,
-    pool,
   );
 
   const history = await runJson(
@@ -508,7 +493,6 @@ test("CLI history returns filtered JSON trends and validates history options", a
       "--json",
     ],
     cwd,
-    pool,
   );
 
   assert.equal(history.suite.id, baseline.suiteId);
@@ -525,7 +509,7 @@ test("CLI history returns filtered JSON trends and validates history options", a
     [512.5, 640.625],
   );
 
-  const badLimit = createRuntime(cwd, pool);
+  const badLimit = createRuntime(cwd);
   assert.equal(
     await runCli(
       ["history", "--suite-id", baseline.suiteId, "--limit", "0"],
@@ -535,7 +519,7 @@ test("CLI history returns filtered JSON trends and validates history options", a
   );
   assert.match(badLimit.stderr.join("\n"), /Option --limit must be a positive integer/);
 
-  const conflictingSelector = createRuntime(cwd, pool);
+  const conflictingSelector = createRuntime(cwd);
   assert.equal(
     await runCli(
       [
@@ -554,13 +538,12 @@ test("CLI history returns filtered JSON trends and validates history options", a
 
 test("CLI import autodetects source, captures git metadata, persists metrics, and prints concise output", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "bra-cli-import-"));
-  const pool = await createPool();
   const filePath = join(cwd, "k6-result.json");
   const gitCalls = [];
 
   await writeFile(filePath, JSON.stringify(k6Fixture), "utf8");
 
-  const { runtime, stdout, stderr } = createRuntime(cwd, pool, {
+  const { runtime, stdout, stderr } = createRuntime(cwd, {
     execFile: async (_file, args) => {
       gitCalls.push(args.join(" "));
 
@@ -596,8 +579,10 @@ test("CLI import autodetects source, captures git metadata, persists metrics, an
   const runId = stdout[0].match(/run (?<runId>\d+)/)?.groups?.runId;
   assert.ok(runId);
 
-  const repository = new PostgresRunRepository(pool);
+  const database = await openCliDatabase(cwd);
+  const repository = new SqliteRunRepository(database);
   const stored = await repository.getRunWithMetrics(runId);
+  database.close();
 
   assert.ok(stored);
   assert.equal(stored.project.name, "cli-import-demo");
@@ -612,9 +597,8 @@ test("CLI import autodetects source, captures git metadata, persists metrics, an
 
 test("CLI import rejects an explicit source type mismatch before persistence", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "bra-cli-import-mismatch-"));
-  const pool = await createPool();
   const filePath = join(cwd, "k6-result.json");
-  const { runtime, stderr } = createRuntime(cwd, pool);
+  const { runtime, stderr } = createRuntime(cwd);
 
   await writeFile(filePath, JSON.stringify(k6Fixture), "utf8");
 
@@ -634,13 +618,11 @@ test("CLI import rejects an explicit source type mismatch before persistence", a
   assert.equal(exitCode, 1);
   assert.match(stderr.join("\n"), /Expected jest benchmark payload but parsed k6/);
 
-  const projects = await pool.query("SELECT COUNT(*) AS count FROM benchmark_projects");
-  assert.equal(Number(projects.rows[0].count), 0);
+  assert.equal(await countRows(cwd, "benchmark_projects"), 0);
 });
 
 test("CLI compare supports --baseline and --candidate without saving", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "bra-cli-compare-explicit-"));
-  const pool = await createPool();
   const baselinePath = join(cwd, "baseline.json");
   const candidatePath = join(cwd, "candidate.json");
 
@@ -660,7 +642,6 @@ test("CLI compare supports --baseline and --candidate without saving", async () 
       "--json",
     ],
     cwd,
-    pool,
   );
   const candidate = await runJson(
     [
@@ -675,9 +656,8 @@ test("CLI compare supports --baseline and --candidate without saving", async () 
       "--json",
     ],
     cwd,
-    pool,
   );
-  const { runtime, stdout, stderr } = createRuntime(cwd, pool);
+  const { runtime, stdout, stderr } = createRuntime(cwd);
 
   assert.equal(
     await runCli(
@@ -698,12 +678,11 @@ test("CLI compare supports --baseline and --candidate without saving", async () 
   assert.equal(stdout[0], `Compared ${baseline.runId} vs ${candidate.runId}: 1 regressions, 1 improvements, 16 unchanged, 2 missing.`);
   assert.equal(stdout[1], "Comparison not saved.");
   assert.match(stdout[2], /Compared 20 metrics/);
-  assert.equal(await countRows(pool, "benchmark_comparisons"), 0);
+  assert.equal(await countRows(cwd, "benchmark_comparisons"), 0);
 });
 
 test("CLI compare resolves --latest --previous by suite name and saves by default", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "bra-cli-compare-latest-"));
-  const pool = await createPool();
   const oldPath = join(cwd, "old.json");
   const previousPath = join(cwd, "previous.json");
   const latestPath = join(cwd, "latest.json");
@@ -725,7 +704,6 @@ test("CLI compare resolves --latest --previous by suite name and saves by defaul
       "--json",
     ],
     cwd,
-    pool,
   );
   const previous = await runJson(
     [
@@ -740,7 +718,6 @@ test("CLI compare resolves --latest --previous by suite name and saves by defaul
       "--json",
     ],
     cwd,
-    pool,
   );
   const latest = await runJson(
     [
@@ -755,7 +732,6 @@ test("CLI compare resolves --latest --previous by suite name and saves by defaul
       "--json",
     ],
     cwd,
-    pool,
   );
   const comparison = await runJson(
     [
@@ -767,7 +743,6 @@ test("CLI compare resolves --latest --previous by suite name and saves by defaul
       "--json",
     ],
     cwd,
-    pool,
   );
 
   assert.equal(comparison.saved, true);
@@ -776,13 +751,12 @@ test("CLI compare resolves --latest --previous by suite name and saves by defaul
   assert.ok(comparison.comparisonId);
   assert.equal(comparison.summary.regressions, 1);
   assert.equal(comparison.summary.improvements, 1);
-  assert.equal(await countRows(pool, "benchmark_comparisons"), 1);
+  assert.equal(await countRows(cwd, "benchmark_comparisons"), 1);
 });
 
 test("CLI compare validates comparison target mode", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "bra-cli-compare-invalid-"));
-  const pool = await createPool();
-  const { runtime, stderr } = createRuntime(cwd, pool);
+  const { runtime, stderr } = createRuntime(cwd);
 
   assert.equal(await runCli(["compare", "--latest", "--suite", "checkout-load-test"], runtime), 1);
   assert.match(stderr.join("\n"), /Use --latest and --previous together/);
@@ -790,10 +764,9 @@ test("CLI compare validates comparison target mode", async () => {
 
 test("CLI report renders terminal text, markdown, and JSON for a comparison id", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "bra-cli-report-"));
-  const pool = await createPool();
-  const comparison = await createSavedComparison(cwd, pool);
+  const comparison = await createSavedComparison(cwd);
 
-  const text = createRuntime(cwd, pool);
+  const text = createRuntime(cwd);
   assert.equal(
     await runCli(["report", "--comparison", comparison.comparisonId], text.runtime),
     0,
@@ -807,7 +780,7 @@ test("CLI report renders terminal text, markdown, and JSON for a comparison id",
     "Summary: 1 regressions, 1 improvements, 16 unchanged, 2 missing.",
   );
 
-  const markdown = createRuntime(cwd, pool);
+  const markdown = createRuntime(cwd);
   assert.equal(
     await runCli(
       ["report", "--comparison-id", comparison.comparisonId, "--format", "markdown"],
@@ -825,7 +798,6 @@ test("CLI report renders terminal text, markdown, and JSON for a comparison id",
   const json = await runJson(
     ["report", comparison.comparisonId, "--format", "json"],
     cwd,
-    pool,
   );
   assert.equal(json.format, "json");
   assert.equal(json.comparison.id, comparison.comparisonId);
@@ -837,9 +809,8 @@ test("CLI report renders terminal text, markdown, and JSON for a comparison id",
 
 test("CLI report validates format and missing comparison id", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "bra-cli-report-invalid-"));
-  const pool = await createPool();
-  const comparison = await createSavedComparison(cwd, pool);
-  const badFormat = createRuntime(cwd, pool);
+  const comparison = await createSavedComparison(cwd);
+  const badFormat = createRuntime(cwd);
 
   assert.equal(
     await runCli(
@@ -853,13 +824,13 @@ test("CLI report validates format and missing comparison id", async () => {
     /Unsupported report format "html". Use text, markdown, or json./,
   );
 
-  const missing = createRuntime(cwd, pool);
+  const missing = createRuntime(cwd);
   assert.equal(await runCli(["report", "--comparison-id", "9999"], missing.runtime), 1);
   assert.match(missing.stderr.join("\n"), /Comparison "9999" was not found/);
 });
 
-async function runJson(argv, cwd, pool) {
-  const { runtime, stdout, stderr } = createRuntime(cwd, pool);
+async function runJson(argv, cwd) {
+  const { runtime, stdout, stderr } = createRuntime(cwd);
   const exitCode = await runCli(argv, runtime);
 
   assert.equal(exitCode, 0, stderr.join("\n"));
@@ -867,7 +838,7 @@ async function runJson(argv, cwd, pool) {
   return JSON.parse(stdout[0]);
 }
 
-async function createSavedComparison(cwd, pool) {
+async function createSavedComparison(cwd) {
   const baselinePath = join(cwd, "baseline.json");
   const candidatePath = join(cwd, "candidate.json");
 
@@ -887,7 +858,6 @@ async function createSavedComparison(cwd, pool) {
       "--json",
     ],
     cwd,
-    pool,
   );
   const candidate = await runJson(
     [
@@ -902,7 +872,6 @@ async function createSavedComparison(cwd, pool) {
       "--json",
     ],
     cwd,
-    pool,
   );
 
   return runJson(
@@ -915,11 +884,10 @@ async function createSavedComparison(cwd, pool) {
       "--json",
     ],
     cwd,
-    pool,
   );
 }
 
-function createRuntime(cwd, pool, overrides = {}) {
+function createRuntime(cwd, overrides = {}) {
   const stdout = [];
   const stderr = [];
 
@@ -931,24 +899,23 @@ function createRuntime(cwd, pool, overrides = {}) {
       env: {},
       stdout: (message) => stdout.push(message),
       stderr: (message) => stderr.push(message),
-      database: pool,
       ...overrides,
     },
   };
 }
 
-async function createPool() {
-  const database = newDb({
-    autoCreateForeignKeyIndices: true,
-    noAstCoverageCheck: true,
-  });
-  const adapter = database.adapters.createPg();
-  return new adapter.Pool();
+async function openCliDatabase(cwd) {
+  return openSqliteDatabase(join(cwd, ".benchmark-analyzer/runs.db"));
 }
 
-async function countRows(pool, tableName) {
-  const result = await pool.query(`SELECT COUNT(*) AS count FROM ${tableName}`);
-  return Number(result.rows[0].count);
+async function countRows(cwd, tableName) {
+  const database = await openCliDatabase(cwd);
+
+  try {
+    return countSqliteRows(database, tableName);
+  } finally {
+    database.close();
+  }
 }
 
 function candidateFixture(input) {

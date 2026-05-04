@@ -4,16 +4,14 @@ import { readFile } from "node:fs/promises";
 import { afterEach, test } from "node:test";
 
 import { Test } from "@nestjs/testing";
-import { newDb } from "pg-mem";
 
 import {
-  PostgresRunRepository,
   RunIngestionService,
   SuiteHistoryController,
   SuiteHistoryModule,
-  applyPostgresSchema,
   createDefaultParserRegistry,
 } from "../dist/index.js";
+import { createRunRepository } from "./sqlite-test-utils.mjs";
 
 const fixture = JSON.parse(
   await readFile(new URL("./fixtures/k6-summary.json", import.meta.url), "utf8"),
@@ -302,12 +300,8 @@ test("GET /suites/:suiteId/history returns 404 when the suite does not exist", a
 });
 
 async function createApp() {
-  const database = newDb({ autoCreateForeignKeyIndices: true });
-  const adapter = database.adapters.createPg();
-  const pool = new adapter.Pool();
-  const runRepository = new PostgresRunRepository(pool);
-
-  await applyPostgresSchema(pool);
+  const { database, repository: runRepository } =
+    await createRunRepository("bra-suite-history-");
 
   const moduleRef = await Test.createTestingModule({
     imports: [
@@ -323,7 +317,7 @@ async function createApp() {
 
   return {
     app,
-    pool,
+    database,
     runRepository,
     controller: app.get(SuiteHistoryController),
   };
