@@ -18,8 +18,6 @@ export interface BenchmarkArtifactInput {
   expectedSourceType?: SourceType;
 }
 
-export type UploadedBenchmarkFile = BenchmarkArtifactInput;
-
 export interface RunIngestionResult {
   parsedRun: ParsedRunPayload;
   persistedRun: PersistedRunRecord;
@@ -64,10 +62,6 @@ export class RunIngestionService {
       parsedRun,
       persistedRun,
     };
-  }
-
-  async ingestUploadedBenchmarkFile(file: UploadedBenchmarkFile): Promise<RunIngestionResult> {
-    return this.ingestBenchmarkArtifact(file);
   }
 
   private applyArtifactMetadata(

@@ -91,8 +91,7 @@ src/cli/           Commands, config loading, file handling, git metadata, termin
 src/runs/          Artifact ingestion service
 src/comparisons/   Persisted comparison orchestration
 src/persistence/   SQLite storage repositories and schema setup
-demo/fixtures/       Local demo artifacts
-docs/                Architecture, rules, demo, and interview notes
+demo/fixtures/    Local demo artifacts
 ```
 
 Main workflow:
@@ -376,10 +375,10 @@ By default, `init` writes:
 
 Suggested terminal screenshots:
 
-- CLI init/import: `docs/screenshots/cli-import.png`
-- CLI compare: `docs/screenshots/cli-compare.png`
-- CLI report Markdown output: `docs/screenshots/cli-report.png`
-- CLI history trends: `docs/screenshots/cli-history.png`
+- CLI init/import
+- CLI compare
+- CLI report Markdown output
+- CLI history trends
 
 ## Known Limitations
 
@@ -413,4 +412,4 @@ npm run demo:seed:dry-run
 npm run cli -- --help
 ```
 
-The tests use `node:test`, `supertest`, and `better-sqlite3` for parser, CLI, API, persistence, and integration coverage.
+The tests use `node:test` and `better-sqlite3` for parser, CLI, persistence, and integration coverage.

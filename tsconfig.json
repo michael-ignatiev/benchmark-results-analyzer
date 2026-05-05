@@ -8,8 +8,6 @@
     "outDir": "dist",
     "declaration": true,
     "strict": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
     "exactOptionalPropertyTypes": true,
     "noUncheckedIndexedAccess": true,
     "forceConsistentCasingInFileNames": true,
